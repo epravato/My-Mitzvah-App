@@ -1,24 +1,46 @@
 {
   "expo": {
-    "name": "TefilinChallenge",
-    "slug": "TefilinChallenge",
+    "name": "Tefillin Challenge",
+    "slug": "tefillin-challenge",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "scheme": "tefillinchallenge",
+    "splash": {
+      "backgroundColor": "#F4F6FA",
+      "resizeMode": "contain",
+      "image": "./assets/splash-icon.png"
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.ethanpravato.tefillinchallenge",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Take a photo to log the mitzvah you did today.",
+        "NSPhotoLibraryUsageDescription": "Choose a photo to log the mitzvah you did today."
+      }
     },
     "android": {
+      "package": "com.ethanpravato.tefillinchallenge",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#E3EDFB",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Choose a photo to log the mitzvah you did today.",
+          "cameraPermission": "Take a photo to log the mitzvah you did today."
+        }
+      ]
+    ]
   }
 }
