@@ -9,6 +9,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,14 +22,30 @@ export default function GroupsScreen() {
   const [showCreate, setShowCreate] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
   const [nameFocused, setNameFocused] = useState(false);
+  const [busyGroupId, setBusyGroupId] = useState(null);
 
-  function handleCreate() {
+  async function handleCreate() {
     if (!newGroupName.trim()) {
       return;
     }
-    createGroup({ name: newGroupName.trim() });
-    setNewGroupName('');
-    setShowCreate(false);
+    try {
+      await createGroup({ name: newGroupName.trim() });
+      setNewGroupName('');
+      setShowCreate(false);
+    } catch (error) {
+      Alert.alert('Could not create group', error.message);
+    }
+  }
+
+  async function handleToggle(groupId) {
+    setBusyGroupId(groupId);
+    try {
+      await toggleGroupMembership(groupId);
+    } catch (error) {
+      Alert.alert('Could not update group', error.message);
+    } finally {
+      setBusyGroupId(null);
+    }
   }
 
   return (
@@ -101,8 +118,9 @@ export default function GroupsScreen() {
             ) : (
               <TouchableOpacity
                 style={[styles.joinButton, item.joined && styles.joinedButton]}
-                onPress={() => toggleGroupMembership(item.id)}
+                onPress={() => handleToggle(item.id)}
                 activeOpacity={0.85}
+                disabled={busyGroupId === item.id}
               >
                 <Text style={[styles.joinText, item.joined && styles.joinedText]}>
                   {item.joined ? 'Joined' : 'Join'}

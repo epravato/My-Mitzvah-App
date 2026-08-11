@@ -27,7 +27,10 @@
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
-      }
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -41,6 +44,18 @@
           "cameraPermission": "Take a photo to log the mitzvah you did today."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "6d8d98ed-a75e-4a89-8de2-5743c51ec11f"
+      }
+    },
+    "owner": "epravato",
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/6d8d98ed-a75e-4a89-8de2-5743c51ec11f"
+    }
   }
 }

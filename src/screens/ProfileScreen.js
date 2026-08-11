@@ -6,13 +6,15 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePosts } from '../context/PostsContext';
+import { useAuth } from '../context/AuthContext';
 import PostCard from '../components/PostCard';
 import { colors, spacing, radius, cardShadow } from '../theme';
 
 const DAYS_SHOWN = 28;
 
 export default function ProfileScreen() {
-  const { user, posts, getGroupName, resetEverything, streakIsAlive } = usePosts();
+  const { user, posts, getGroupName, streakIsAlive } = usePosts();
+  const { signOut } = useAuth();
   const insets = useSafeAreaInsets();
 
   const myPosts = posts.filter((post) => post.userId === user.id);
@@ -89,9 +91,9 @@ export default function ProfileScreen() {
         </View>
       )}
 
-      <TouchableOpacity style={styles.resetButton} onPress={resetEverything} activeOpacity={0.7}>
-        <Ionicons name="refresh-outline" size={15} color={colors.textMuted} />
-        <Text style={styles.resetText}>Reset demo data</Text>
+      <TouchableOpacity style={styles.resetButton} onPress={signOut} activeOpacity={0.7}>
+        <Ionicons name="log-out-outline" size={15} color={colors.textMuted} />
+        <Text style={styles.resetText}>Sign out</Text>
       </TouchableOpacity>
     </ScrollView>
   );

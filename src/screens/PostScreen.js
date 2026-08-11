@@ -31,6 +31,7 @@ export default function PostScreen({ navigation }) {
   const [selectedChallenge, setSelectedChallenge] = useState('Tefillin');
   const [selectedGroupId, setSelectedGroupId] = useState('group-global');
   const [captionFocused, setCaptionFocused] = useState(false);
+  const [posting, setPosting] = useState(false);
 
   const joinedGroups = groups.filter((group) => group.joined);
 
@@ -56,16 +57,23 @@ export default function PostScreen({ navigation }) {
     }
   }
 
-  function submitPost() {
-    addPost({
-      challenge: selectedChallenge,
-      caption,
-      photoUri,
-      groupId: selectedGroupId,
-    });
-    setPhotoUri(null);
-    setCaption('');
-    navigation.navigate('Feed');
+  async function submitPost() {
+    setPosting(true);
+    try {
+      await addPost({
+        challenge: selectedChallenge,
+        caption,
+        groupId: selectedGroupId,
+        photoUri,
+      });
+      setPhotoUri(null);
+      setCaption('');
+      navigation.navigate('Feed');
+    } catch (error) {
+      Alert.alert('Could not post', error.message);
+    } finally {
+      setPosting(false);
+    }
   }
 
   return (
@@ -167,9 +175,14 @@ export default function PostScreen({ navigation }) {
         multiline
       />
 
-      <TouchableOpacity style={styles.postButton} onPress={submitPost} activeOpacity={0.85}>
+      <TouchableOpacity
+        style={[styles.postButton, posting && styles.postButtonDisabled]}
+        onPress={submitPost}
+        activeOpacity={0.85}
+        disabled={posting}
+      >
         <Ionicons name="checkmark-circle-outline" size={19} color={colors.card} />
-        <Text style={styles.postButtonText}>Post to feed</Text>
+        <Text style={styles.postButtonText}>{posting ? 'Posting…' : 'Post to feed'}</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -299,6 +312,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.small,
     paddingVertical: 15,
     marginTop: spacing.large,
+  },
+  postButtonDisabled: {
+    opacity: 0.7,
   },
   postButtonText: {
     color: colors.card,

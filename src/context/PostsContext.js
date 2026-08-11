@@ -1,162 +1,113 @@
-// One place that owns all app state. Screens call usePosts() instead of touching
-// dummyData directly, so swapping dummy data for the real Cloudflare backend later
-// only means changing this file.
+// One place that owns all app data. Screens call usePosts() instead of talking
+// to the backend directly, matching the plan from decisions.md: swapping
+// dummy data for the real Cloudflare backend only meant changing this file.
 //
-// State is saved to the device with AsyncStorage, so closing the app or refreshing
-// the browser no longer wipes your streak. On the web AsyncStorage is backed by the
-// browser's own storage, so the same code works in both places.
+// Data now lives on the server (Cloudflare D1), not on the device. This file's
+// job is to fetch it after login, keep a local copy for the screens to read,
+// and send changes (a new post, joining a group) up to the server.
 
-import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  currentUser as seedUser,
-  groups as seedGroups,
-  posts as seedPosts,
-  challenges as seedChallenges,
-} from '../data/dummyData';
+import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
+import { useAuth } from './AuthContext';
+import { api } from '../api';
+import { challenges as staticChallenges } from '../data/dummyData';
 import { todayKey, daysBetween } from '../dateHelpers';
 
 const PostsContext = createContext(null);
 
-// Bump the number in this key if the saved shape ever changes in a way that would
-// break older saves. Anything stored under the old key is then simply ignored.
-const STORAGE_KEY = 'tefillin-challenge-state-v1';
-
-const ONE_DAY = 24 * 60 * 60 * 1000;
-
-function yesterdayKey() {
-  return todayKey(new Date(Date.now() - ONE_DAY));
-}
-
 export function PostsProvider({ children }) {
-  const [posts, setPosts] = useState(seedPosts);
-  const [groups, setGroups] = useState(seedGroups);
-  const [user, setUser] = useState(seedUser);
+  const { token, user: authUser, updateUser } = useAuth();
 
-  // The last day the user logged, as "YYYY-MM-DD". Storing the date instead of a
-  // true/false flag is what lets the app tell yesterday apart from last week.
-  // The sample data starts on yesterday, so a fresh install opens with a live
-  // 12 day streak you can continue rather than a dead one.
-  const [lastLoggedDate, setLastLoggedDate] = useState(yesterdayKey);
-
-  // Stays false until the saved data has been read back, so the first render does
-  // not overwrite a real save with the seed data.
+  const [posts, setPosts] = useState([]);
+  const [groups, setGroups] = useState([]);
+  // Stays false until the first load from the server finishes, so the
+  // screens do not flash an empty feed before the real posts arrive.
   const [hydrated, setHydrated] = useState(false);
 
-  // Load whatever was saved last time, once, on startup.
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadSavedState() {
-      try {
-        const saved = await AsyncStorage.getItem(STORAGE_KEY);
-        if (saved && !cancelled) {
-          const parsed = JSON.parse(saved);
-          if (parsed.posts) setPosts(parsed.posts);
-          if (parsed.groups) setGroups(parsed.groups);
-          if (parsed.user) setUser(parsed.user);
-          if (parsed.lastLoggedDate) setLastLoggedDate(parsed.lastLoggedDate);
-        }
-      } catch (error) {
-        // A bad or unreadable save should not brick the app. Fall back to the seed
-        // data and carry on.
-        console.warn('Could not read saved data, starting fresh.', error);
-      } finally {
-        if (!cancelled) {
-          setHydrated(true);
-        }
-      }
-    }
-
-    loadSavedState();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Save on every change, but only after the initial load has finished.
-  useEffect(() => {
-    if (!hydrated) {
+  const loadEverything = useCallback(async () => {
+    if (!token) {
       return;
     }
-    AsyncStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ posts, groups, user, lastLoggedDate })
-    ).catch((error) => {
-      console.warn('Could not save data.', error);
-    });
-  }, [hydrated, posts, groups, user, lastLoggedDate]);
+    try {
+      // "global" returns every post from everyone, which is also what the
+      // Feed screen's "My Groups" toggle filters down from client-side, same
+      // as it did with the old dummy data.
+      const [postsResult, groupsResult] = await Promise.all([
+        api.getPosts(token, 'global'),
+        api.getGroups(token),
+      ]);
+      setPosts(postsResult.posts);
+      setGroups(groupsResult.groups);
+    } catch (error) {
+      // A failed load leaves the screens showing stale (or empty) data
+      // rather than crashing. Whoever is on the Today screen can still see
+      // their own stats, since those come from the login response, not
+      // this fetch.
+      console.warn('Could not load posts or groups.', error);
+    } finally {
+      setHydrated(true);
+    }
+  }, [token]);
 
+  useEffect(() => {
+    setHydrated(false);
+    loadEverything();
+  }, [loadEverything]);
+
+  // Streak aliveness is computed here, on the phone, from the date the
+  // server says was last logged. Only the phone knows the person's own
+  // timezone, so this stays client-side exactly like it did before the
+  // backend existed. See src/dateHelpers.js.
   const today = todayKey();
-  const postedToday = lastLoggedDate === today;
-
-  // A streak only survives if the last log was today or yesterday. Any longer gap
-  // and it is broken, so the app says so instead of showing a number that is a lie.
-  const gapSinceLastLog = daysBetween(lastLoggedDate, today);
+  const postedToday = authUser ? authUser.lastLoggedDate === today : false;
+  const gapSinceLastLog = authUser ? daysBetween(authUser.lastLoggedDate, today) : null;
   const streakIsAlive = gapSinceLastLog !== null && gapSinceLastLog <= 1;
-  const currentStreak = streakIsAlive ? user.streak : 0;
+  const currentStreak = streakIsAlive && authUser ? authUser.streak : 0;
 
-  function addPost({ challenge, caption, photoUri, groupId }) {
-    // Logging twice in one day should not inflate the streak.
-    const alreadyLoggedToday = lastLoggedDate === today;
-
-    let nextStreak = currentStreak;
-    if (!alreadyLoggedToday) {
-      // Logged yesterday means the streak continues. Anything else starts it over.
-      nextStreak = gapSinceLastLog === 1 ? user.streak + 1 : 1;
+  async function addPost({ challenge, caption, groupId, photoUri }) {
+    // The photo, if there is one, has to reach the server before the post
+    // does, since the post only stores the photo's key, not the photo
+    // itself. If the upload fails, the post is not created at all, rather
+    // than silently posting without the proof photo the person meant to
+    // include.
+    let photoKey = null;
+    if (photoUri) {
+      const uploaded = await api.uploadPhoto(token, photoUri);
+      photoKey = uploaded.key;
     }
 
-    const newPost = {
-      id: `post-${Date.now()}`,
-      userId: user.id,
-      userName: user.name,
-      initials: user.initials,
-      groupId: groupId || 'group-global',
-      challenge: challenge || 'Tefillin',
-      caption: caption || '',
-      photoUri: photoUri || null,
-      photoTint: '#E3EDFB',
-      createdAt: Date.now(),
-      streakAtPost: nextStreak,
-    };
-
-    setPosts((previous) => [newPost, ...previous]);
-
-    if (!alreadyLoggedToday) {
-      setUser((previous) => ({
-        ...previous,
-        streak: nextStreak,
-        bestStreak: Math.max(previous.bestStreak, nextStreak),
-        totalDays: previous.totalDays + 1,
-      }));
-      setLastLoggedDate(today);
-    }
+    const { post, user: updatedUser } = await api.createPost(token, {
+      challenge,
+      caption,
+      groupId,
+      dayKey: todayKey(),
+      photoKey,
+    });
+    setPosts((previous) => [post, ...previous]);
+    updateUser(updatedUser);
   }
 
-  function toggleGroupMembership(groupId) {
+  async function toggleGroupMembership(groupId) {
+    const group = groups.find((g) => g.id === groupId);
+    if (!group) {
+      return;
+    }
+    if (group.joined) {
+      await api.leaveGroup(token, groupId);
+    } else {
+      await api.joinGroup(token, groupId);
+    }
     setGroups((previous) =>
-      previous.map((group) =>
-        group.id === groupId ? { ...group, joined: !group.joined } : group
-      )
+      previous.map((g) => (g.id === groupId ? { ...g, joined: !g.joined } : g))
     );
   }
 
-  function createGroup({ name, description }) {
-    const newGroup = {
-      id: `group-${Date.now()}`,
-      name,
-      description: description || 'A new accountability group',
-      memberCount: 1,
-      isGlobal: false,
-      joined: true,
-      inviteCode: name.slice(0, 6).toUpperCase().replace(/\s/g, ''),
-    };
-    setGroups((previous) => [...previous, newGroup]);
-    return newGroup;
+  async function createGroup({ name, description }) {
+    const { group } = await api.createGroup(token, name, description);
+    setGroups((previous) => [...previous, group]);
+    return group;
   }
 
   // Posts the user should actually see, based on which groups they belong to.
-  // PostCard handles turning a saved timestamp into "2h ago".
   function getVisiblePosts(feedMode) {
     if (feedMode === 'global') {
       return posts;
@@ -172,21 +123,12 @@ export function PostsProvider({ children }) {
     return match ? match.name : 'Unknown group';
   }
 
-  // Wipes the save and puts the sample data back. Handy while demoing.
-  async function resetEverything() {
-    await AsyncStorage.removeItem(STORAGE_KEY);
-    setPosts(seedPosts);
-    setGroups(seedGroups);
-    setUser(seedUser);
-    setLastLoggedDate(yesterdayKey());
-  }
-
   const value = useMemo(
     () => ({
       posts,
       groups,
-      user: { ...user, streak: currentStreak },
-      challenges: seedChallenges,
+      user: authUser ? { ...authUser, streak: currentStreak } : null,
+      challenges: staticChallenges,
       postedToday,
       hydrated,
       streakIsAlive,
@@ -195,9 +137,9 @@ export function PostsProvider({ children }) {
       createGroup,
       getVisiblePosts,
       getGroupName,
-      resetEverything,
+      refresh: loadEverything,
     }),
-    [posts, groups, user, lastLoggedDate, hydrated, currentStreak, postedToday, streakIsAlive]
+    [posts, groups, authUser, currentStreak, hydrated, postedToday, streakIsAlive, loadEverything]
   );
 
   return <PostsContext.Provider value={value}>{children}</PostsContext.Provider>;

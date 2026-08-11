@@ -9,6 +9,9 @@ dist/
 web-build/
 expo-env.d.ts
 
+# Cloudflare Workers local dev cache (backend/)
+.wrangler/
+
 # Native
 .kotlin/
 *.orig.*

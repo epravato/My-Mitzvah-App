@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "tefillinchallenge-api",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-01",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "tefillinchallenge-db",
+      "database_id": "7302912c-3544-4672-ba5c-6fa18364801e"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "PHOTOS",
+      "bucket_name": "tefillinchallenge-photos"
+    }
+  ]
+}

@@ -6,10 +6,14 @@ import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
+import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { PostsProvider, usePosts } from './src/context/PostsContext';
+import LoginScreen from './src/screens/LoginScreen';
+import SignupScreen from './src/screens/SignupScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import FeedScreen from './src/screens/FeedScreen';
 import PostScreen from './src/screens/PostScreen';
@@ -18,6 +22,7 @@ import ProfileScreen from './src/screens/ProfileScreen';
 import { colors, buttonShadow } from './src/theme';
 
 const Tab = createBottomTabNavigator();
+const AuthStack = createNativeStackNavigator();
 
 const navigationTheme = {
   ...DefaultTheme,
@@ -58,22 +63,63 @@ function tabIcon(name) {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <PostsProvider>
+      <AuthProvider>
         <StatusBar style="dark" />
-        <RootTabs />
-      </PostsProvider>
+        <RootNavigator />
+      </AuthProvider>
     </SafeAreaProvider>
+  );
+}
+
+// Switches between the login/signup screens and the real app, based on
+// whether anyone is signed in. PostsProvider only mounts once someone is
+// logged in, since it needs a login token to fetch anything.
+function RootNavigator() {
+  const { user, hydrated } = useAuth();
+
+  // Hold off on the first paint until the saved login has been checked,
+  // otherwise the login screen flashes for a moment even for someone who is
+  // already signed in.
+  if (!hydrated) {
+    return <View style={styles.loading} />;
+  }
+
+  if (!user) {
+    return (
+      <NavigationContainer theme={navigationTheme}>
+        <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+          <AuthStack.Screen name="Login" component={LoginScreen} />
+          <AuthStack.Screen name="Signup" component={SignupScreen} />
+        </AuthStack.Navigator>
+      </NavigationContainer>
+    );
+  }
+
+  return (
+    <PostsProvider>
+      <RootTabs />
+    </PostsProvider>
   );
 }
 
 function RootTabs() {
   const { hydrated } = usePosts();
+  const insets = useSafeAreaInsets();
 
   // Hold off on the first paint until the saved data is read back, otherwise the
   // sample streak flashes on screen before the real one replaces it.
   if (!hydrated) {
     return <View style={styles.loading} />;
   }
+
+  // On native, the tab bar needs to clear the home indicator, so its height and
+  // bottom padding grow with the device's safe-area inset. Web has no home indicator,
+  // so it keeps a fixed height instead.
+  const tabBarHeight = Platform.OS === 'web' ? 68 : 56 + insets.bottom;
+  const tabBarStyle = [
+    styles.tabBar,
+    { height: tabBarHeight, paddingBottom: Platform.OS === 'web' ? 0 : insets.bottom },
+  ];
 
   return (
     <NavigationContainer theme={navigationTheme}>
@@ -82,7 +128,7 @@ function RootTabs() {
           headerShown: false,
           tabBarActiveTintColor: colors.blue,
           tabBarInactiveTintColor: colors.textMuted,
-          tabBarStyle: styles.tabBar,
+          tabBarStyle,
           tabBarLabelStyle: styles.tabLabel,
           tabBarItemStyle: styles.tabItem,
         }}
@@ -129,7 +175,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderTopColor: colors.border,
     borderTopWidth: 1,
-    height: Platform.OS === 'web' ? 68 : undefined,
     paddingTop: 6,
   },
   tabItem: {
