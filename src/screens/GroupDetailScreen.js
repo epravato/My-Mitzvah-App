@@ -71,8 +71,7 @@ export default function GroupDetailScreen({ route, navigation }) {
   const loadMembers = useCallback(async () => {
     setMembersLoading(true);
     try {
-      const result = await getGroupMembers(groupId);
-      setMembers(result.members);
+      setMembers(await getGroupMembers(groupId));
     } catch (error) {
       console.warn('Could not load members.', error);
     } finally {
@@ -82,8 +81,7 @@ export default function GroupDetailScreen({ route, navigation }) {
 
   const loadRequests = useCallback(async () => {
     try {
-      const result = await getGroupRequests(groupId);
-      setRequests(result.requests);
+      setRequests(await getGroupRequests(groupId));
     } catch (error) {
       console.warn('Could not load join requests.', error);
     }
@@ -94,11 +92,9 @@ export default function GroupDetailScreen({ route, navigation }) {
       setLeaderboardLoading(true);
     }
     try {
-      const result = await getGroupLeaderboard(groupId, {
-        challenge: challengeFilter,
-        sort: sortBy,
-      });
-      setLeaderboard(result.leaderboard);
+      setLeaderboard(
+        await getGroupLeaderboard(groupId, { challenge: challengeFilter, sort: sortBy })
+      );
     } catch (error) {
       console.warn('Could not load leaderboard.', error);
     } finally {
