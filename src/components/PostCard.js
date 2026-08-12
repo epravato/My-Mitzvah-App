@@ -7,8 +7,10 @@ import { View, Text, Image, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, cardShadow } from '../theme';
 import { formatTimeAgo } from '../dateHelpers';
+import { challengeName } from '../data/dummyData';
 
 export default function PostCard({ post, groupName }) {
+  const challengeLabel = challengeName(post.challenge);
   // Posts you made carry a real timestamp, so their age stays accurate across a
   // refresh. The seeded sample posts only have a fixed label like "38m ago".
   const timeAgo = post.createdAt ? formatTimeAgo(post.createdAt) : post.timeAgo;
@@ -38,13 +40,13 @@ export default function PostCard({ post, groupName }) {
       ) : (
         <View style={[styles.photo, styles.placeholder, { backgroundColor: post.photoTint }]}>
           <Ionicons name="image-outline" size={32} color={colors.textFaint} />
-          <Text style={styles.placeholderText}>{post.challenge} photo</Text>
+          <Text style={styles.placeholderText}>{challengeLabel} photo</Text>
         </View>
       )}
 
       <View style={styles.footer}>
         <View style={styles.challengeTag}>
-          <Text style={styles.challengeTagText}>{post.challenge}</Text>
+          <Text style={styles.challengeTagText}>{challengeLabel}</Text>
         </View>
         {post.caption ? <Text style={styles.caption}>{post.caption}</Text> : null}
       </View>

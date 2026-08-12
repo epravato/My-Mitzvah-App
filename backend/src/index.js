@@ -12,9 +12,28 @@ const routes = [
   { method: 'POST', pattern: /^\/api\/login$/, handler: handlers.login, requiresAuth: false },
   { method: 'POST', pattern: /^\/api\/logout$/, handler: handlers.logout, requiresAuth: false },
   { method: 'GET', pattern: /^\/api\/me$/, handler: handlers.me, requiresAuth: true },
+  {
+    method: 'POST',
+    pattern: /^\/api\/forgot-password$/,
+    handler: handlers.forgotPassword,
+    requiresAuth: false,
+  },
+  {
+    method: 'POST',
+    pattern: /^\/api\/reset-password$/,
+    handler: handlers.resetPassword,
+    requiresAuth: false,
+  },
 
   { method: 'GET', pattern: /^\/api\/groups$/, handler: handlers.listGroups, requiresAuth: true },
+  { method: 'GET', pattern: /^\/api\/groups\/search$/, handler: handlers.searchGroups, requiresAuth: true },
   { method: 'POST', pattern: /^\/api\/groups$/, handler: handlers.createGroup, requiresAuth: true },
+  {
+    method: 'POST',
+    pattern: /^\/api\/groups\/join-by-code$/,
+    handler: handlers.joinGroupByCode,
+    requiresAuth: true,
+  },
   {
     method: 'POST',
     pattern: /^\/api\/groups\/([^/]+)\/join$/,
@@ -25,6 +44,38 @@ const routes = [
     method: 'POST',
     pattern: /^\/api\/groups\/([^/]+)\/leave$/,
     handler: (request, env, user, match) => handlers.leaveGroup(request, env, user, match[1]),
+    requiresAuth: true,
+  },
+  {
+    method: 'GET',
+    pattern: /^\/api\/groups\/([^/]+)\/requests$/,
+    handler: (request, env, user, match) => handlers.listJoinRequests(request, env, user, match[1]),
+    requiresAuth: true,
+  },
+  {
+    method: 'POST',
+    pattern: /^\/api\/groups\/([^/]+)\/requests\/([^/]+)\/approve$/,
+    handler: (request, env, user, match) =>
+      handlers.approveJoinRequest(request, env, user, match[1], match[2]),
+    requiresAuth: true,
+  },
+  {
+    method: 'POST',
+    pattern: /^\/api\/groups\/([^/]+)\/requests\/([^/]+)\/deny$/,
+    handler: (request, env, user, match) =>
+      handlers.denyJoinRequest(request, env, user, match[1], match[2]),
+    requiresAuth: true,
+  },
+  {
+    method: 'GET',
+    pattern: /^\/api\/groups\/([^/]+)\/members$/,
+    handler: (request, env, user, match) => handlers.listMembers(request, env, user, match[1]),
+    requiresAuth: true,
+  },
+  {
+    method: 'GET',
+    pattern: /^\/api\/groups\/([^/]+)\/leaderboard$/,
+    handler: (request, env, user, match) => handlers.getLeaderboard(request, env, user, match[1]),
     requiresAuth: true,
   },
 

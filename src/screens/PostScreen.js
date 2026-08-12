@@ -19,6 +19,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { usePosts } from '../context/PostsContext';
 import { colors, spacing, radius, cardShadow, webInputReset } from '../theme';
 
@@ -28,12 +29,12 @@ export default function PostScreen({ navigation }) {
 
   const [photoUri, setPhotoUri] = useState(null);
   const [caption, setCaption] = useState('');
-  const [selectedChallenge, setSelectedChallenge] = useState('Tefillin');
+  const [selectedChallenge, setSelectedChallenge] = useState('tefillin');
   const [selectedGroupId, setSelectedGroupId] = useState('group-global');
   const [captionFocused, setCaptionFocused] = useState(false);
   const [posting, setPosting] = useState(false);
 
-  const joinedGroups = groups.filter((group) => group.joined);
+  const joinedGroups = groups.filter((group) => group.membershipStatus === 'active');
 
   async function pickPhoto() {
     // Web has no native camera launch, so fall back to the file picker there.
@@ -53,7 +54,15 @@ export default function PostScreen({ navigation }) {
       : await ImagePicker.launchImageLibraryAsync(options);
 
     if (!result.canceled && result.assets && result.assets.length > 0) {
-      setPhotoUri(result.assets[0].uri);
+      // Cap what actually gets stored: photos come out of the camera far
+      // bigger than the app ever displays them, and every post lives in R2
+      // forever, so shrinking here (not just on the server) is what keeps
+      // storage cost from growing unbounded as more people post daily.
+      const context = ImageManipulator.manipulate(result.assets[0].uri);
+      context.resize({ width: 1200 });
+      const rendered = await context.renderAsync();
+      const compressed = await rendered.saveAsync({ format: SaveFormat.JPEG, compress: 0.7 });
+      setPhotoUri(compressed.uri);
     }
   }
 
@@ -116,21 +125,21 @@ export default function PostScreen({ navigation }) {
             key={challenge.id}
             style={[
               styles.chip,
-              selectedChallenge === challenge.name && styles.chipActive,
+              selectedChallenge === challenge.id && styles.chipActive,
               !challenge.active && styles.chipDisabled,
             ]}
-            onPress={() => challenge.active && setSelectedChallenge(challenge.name)}
+            onPress={() => challenge.active && setSelectedChallenge(challenge.id)}
             activeOpacity={challenge.active ? 0.8 : 1}
           >
             <Ionicons
               name={challenge.icon}
               size={15}
-              color={selectedChallenge === challenge.name ? colors.blue : colors.textMuted}
+              color={selectedChallenge === challenge.id ? colors.blue : colors.textMuted}
             />
             <Text
               style={[
                 styles.chipText,
-                selectedChallenge === challenge.name && styles.chipTextActive,
+                selectedChallenge === challenge.id && styles.chipTextActive,
               ]}
             >
               {challenge.name}

@@ -86,25 +86,76 @@ export function PostsProvider({ children }) {
     updateUser(updatedUser);
   }
 
-  async function toggleGroupMembership(groupId) {
-    const group = groups.find((g) => g.id === groupId);
-    if (!group) {
-      return;
-    }
-    if (group.joined) {
-      await api.leaveGroup(token, groupId);
-    } else {
-      await api.joinGroup(token, groupId);
-    }
+  // Upserts a group into local state by id, used whenever a call returns a
+  // fresh copy of a group the user just joined or created.
+  function upsertGroup(group) {
+    setGroups((previous) => {
+      const exists = previous.some((g) => g.id === group.id);
+      return exists ? previous.map((g) => (g.id === group.id ? group : g)) : [...previous, group];
+    });
+  }
+
+  async function searchGroups(query) {
+    const { groups: results } = await api.searchGroups(token, query);
+    return results;
+  }
+
+  async function requestToJoinGroup(groupId) {
+    const { status, group } = await api.joinGroup(token, groupId);
+    upsertGroup(group);
+    return status;
+  }
+
+  async function joinGroupByCode(code) {
+    const { group } = await api.joinGroupByCode(token, code);
+    upsertGroup(group);
+    return group;
+  }
+
+  async function leaveGroup(groupId) {
+    await api.leaveGroup(token, groupId);
+    setGroups((previous) => previous.filter((g) => g.id !== groupId));
+  }
+
+  async function createGroup({ name, description, joinPolicy }) {
+    const { group } = await api.createGroup(token, name, description, joinPolicy);
+    setGroups((previous) => [...previous, group]);
+    return group;
+  }
+
+  async function getGroupRequests(groupId) {
+    const { requests } = await api.getGroupRequests(token, groupId);
+    return requests;
+  }
+
+  async function approveGroupRequest(groupId, userId) {
+    await api.approveGroupRequest(token, groupId, userId);
     setGroups((previous) =>
-      previous.map((g) => (g.id === groupId ? { ...g, joined: !g.joined } : g))
+      previous.map((g) =>
+        g.id === groupId
+          ? { ...g, memberCount: g.memberCount + 1, pendingCount: Math.max(0, g.pendingCount - 1) }
+          : g
+      )
     );
   }
 
-  async function createGroup({ name, description }) {
-    const { group } = await api.createGroup(token, name, description);
-    setGroups((previous) => [...previous, group]);
-    return group;
+  async function denyGroupRequest(groupId, userId) {
+    await api.denyGroupRequest(token, groupId, userId);
+    setGroups((previous) =>
+      previous.map((g) =>
+        g.id === groupId ? { ...g, pendingCount: Math.max(0, g.pendingCount - 1) } : g
+      )
+    );
+  }
+
+  async function getGroupMembers(groupId) {
+    const { members } = await api.getGroupMembers(token, groupId);
+    return members;
+  }
+
+  async function getGroupLeaderboard(groupId, { challenge, sort } = {}) {
+    const { leaderboard } = await api.getGroupLeaderboard(token, groupId, { challenge, sort });
+    return leaderboard;
   }
 
   // Posts the user should actually see, based on which groups they belong to.
@@ -113,7 +164,7 @@ export function PostsProvider({ children }) {
       return posts;
     }
     const joinedGroupIds = groups
-      .filter((group) => group.joined && !group.isGlobal)
+      .filter((group) => group.membershipStatus === 'active' && !group.isGlobal)
       .map((group) => group.id);
     return posts.filter((post) => joinedGroupIds.includes(post.groupId));
   }
@@ -133,8 +184,16 @@ export function PostsProvider({ children }) {
       hydrated,
       streakIsAlive,
       addPost,
-      toggleGroupMembership,
+      searchGroups,
+      requestToJoinGroup,
+      joinGroupByCode,
+      leaveGroup,
       createGroup,
+      getGroupRequests,
+      approveGroupRequest,
+      denyGroupRequest,
+      getGroupMembers,
+      getGroupLeaderboard,
       getVisiblePosts,
       getGroupName,
       refresh: loadEverything,

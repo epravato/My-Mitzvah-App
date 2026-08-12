@@ -9,6 +9,7 @@ import { usePosts } from '../context/PostsContext';
 import { useAuth } from '../context/AuthContext';
 import PostCard from '../components/PostCard';
 import { colors, spacing, radius, cardShadow } from '../theme';
+import { todayKey } from '../dateHelpers';
 
 const DAYS_SHOWN = 28;
 
@@ -19,13 +20,14 @@ export default function ProfileScreen() {
 
   const myPosts = posts.filter((post) => post.userId === user.id);
 
-  // Last 28 days. The most recent `streak` days count as done, and a couple of
-  // older days are filled in so the grid looks like a real history.
+  // Last 28 days, one dot per real logged day. A brand-new account has no
+  // posts yet, so every dot starts missed until the person actually logs.
+  const loggedDayKeys = new Set(myPosts.map((post) => todayKey(new Date(post.createdAt))));
   const history = Array.from({ length: DAYS_SHOWN }, (_, index) => {
     const daysAgo = DAYS_SHOWN - 1 - index;
-    const withinStreak = daysAgo < user.streak;
-    const olderHit = daysAgo > user.streak + 1 && daysAgo % 3 !== 0;
-    return withinStreak || olderHit;
+    const date = new Date();
+    date.setDate(date.getDate() - daysAgo);
+    return loggedDayKeys.has(todayKey(date));
   });
 
   return (

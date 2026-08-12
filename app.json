@@ -1,12 +1,12 @@
 {
   "expo": {
-    "name": "Tefillin Challenge",
-    "slug": "tefillin-challenge",
+    "name": "My Mitzvahs",
+    "slug": "mitzvah-app-live",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "scheme": "tefillinchallenge",
+    "scheme": "mymitzvahs",
     "splash": {
       "backgroundColor": "#F4F6FA",
       "resizeMode": "contain",
@@ -45,17 +45,17 @@
         }
       ]
     ],
-    "extra": {
-      "eas": {
-        "projectId": "6d8d98ed-a75e-4a89-8de2-5743c51ec11f"
-      }
-    },
     "owner": "epravato",
     "runtimeVersion": {
       "policy": "sdkVersion"
     },
+    "extra": {
+      "eas": {
+        "projectId": "4bed19df-5a05-4333-a7b4-a2c872dae0cc"
+      }
+    },
     "updates": {
-      "url": "https://u.expo.dev/6d8d98ed-a75e-4a89-8de2-5743c51ec11f"
+      "url": "https://u.expo.dev/4bed19df-5a05-4333-a7b4-a2c872dae0cc"
     }
   }
 }

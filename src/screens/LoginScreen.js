@@ -99,6 +99,14 @@ export default function LoginScreen({ navigation }) {
             <Text style={styles.submitText}>Sign in</Text>
           )}
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.forgotLink}
+          onPress={() => navigation.navigate('ForgotPassword')}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.forgotText}>Forgot password?</Text>
+        </TouchableOpacity>
       </View>
 
       <TouchableOpacity
@@ -191,6 +199,14 @@ const styles = StyleSheet.create({
     color: colors.card,
     fontSize: 15,
     fontWeight: '800',
+  },
+  forgotLink: {
+    marginTop: spacing.medium,
+    alignItems: 'center',
+  },
+  forgotText: {
+    color: colors.textMuted,
+    fontSize: 13,
   },
   switchLink: {
     marginTop: spacing.large,

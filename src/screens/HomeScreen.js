@@ -24,7 +24,9 @@ export default function HomeScreen({ navigation }) {
     day: 'numeric',
   });
 
-  const joinedCount = groups.filter((group) => group.joined && !group.isGlobal).length;
+  const joinedCount = groups.filter(
+    (group) => group.membershipStatus === 'active' && !group.isGlobal
+  ).length;
 
   return (
     <ScrollView
@@ -49,7 +51,7 @@ export default function HomeScreen({ navigation }) {
           centerLabel={`of ${user.goalDays} days`}
           centerCaption={daysLeft > 0 ? `${daysLeft} to go` : 'Challenge complete'}
         />
-        <Text style={styles.ringTitle}>40 Day Tefillin Challenge</Text>
+        <Text style={styles.ringTitle}>40 Day Mitzvah Challenge</Text>
         <Text style={styles.ringSubtitle}>
           {postedToday
             ? 'Logged today. Nice work.'

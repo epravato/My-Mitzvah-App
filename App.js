@@ -14,15 +14,31 @@ import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { PostsProvider, usePosts } from './src/context/PostsContext';
 import LoginScreen from './src/screens/LoginScreen';
 import SignupScreen from './src/screens/SignupScreen';
+import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 import HomeScreen from './src/screens/HomeScreen';
 import FeedScreen from './src/screens/FeedScreen';
 import PostScreen from './src/screens/PostScreen';
 import GroupsScreen from './src/screens/GroupsScreen';
+import CreateGroupScreen from './src/screens/CreateGroupScreen';
+import GroupDetailScreen from './src/screens/GroupDetailScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import { colors, buttonShadow } from './src/theme';
 
 const Tab = createBottomTabNavigator();
 const AuthStack = createNativeStackNavigator();
+const GroupsStack = createNativeStackNavigator();
+
+// Groups is a tab that also drills into its own screens (create, detail), so
+// it gets its own stack. Screens draw their own headers, so the stack's is hidden.
+function GroupsStackScreen() {
+  return (
+    <GroupsStack.Navigator screenOptions={{ headerShown: false }}>
+      <GroupsStack.Screen name="GroupsList" component={GroupsScreen} />
+      <GroupsStack.Screen name="CreateGroup" component={CreateGroupScreen} />
+      <GroupsStack.Screen name="GroupDetail" component={GroupDetailScreen} />
+    </GroupsStack.Navigator>
+  );
+}
 
 const navigationTheme = {
   ...DefaultTheme,
@@ -90,6 +106,7 @@ function RootNavigator() {
         <AuthStack.Navigator screenOptions={{ headerShown: false }}>
           <AuthStack.Screen name="Login" component={LoginScreen} />
           <AuthStack.Screen name="Signup" component={SignupScreen} />
+          <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         </AuthStack.Navigator>
       </NavigationContainer>
     );
@@ -153,7 +170,7 @@ function RootTabs() {
         />
         <Tab.Screen
           name="Groups"
-          component={GroupsScreen}
+          component={GroupsStackScreen}
           options={{ tabBarIcon: tabIcon('people-outline') }}
         />
         <Tab.Screen

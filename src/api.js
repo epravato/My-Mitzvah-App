@@ -52,12 +52,30 @@ export const api = {
   login: (email, password) => request('/api/login', { method: 'POST', body: { email, password } }),
   logout: (token) => request('/api/logout', { method: 'POST', token }),
   me: (token) => request('/api/me', { token }),
+  forgotPassword: (email) => request('/api/forgot-password', { method: 'POST', body: { email } }),
+  resetPassword: (email, code, newPassword) =>
+    request('/api/reset-password', { method: 'POST', body: { email, code, newPassword } }),
 
   getGroups: (token) => request('/api/groups', { token }),
-  createGroup: (token, name, description) =>
-    request('/api/groups', { method: 'POST', token, body: { name, description } }),
+  searchGroups: (token, query) =>
+    request(`/api/groups/search?q=${encodeURIComponent(query)}`, { token }),
+  createGroup: (token, name, description, joinPolicy) =>
+    request('/api/groups', { method: 'POST', token, body: { name, description, joinPolicy } }),
   joinGroup: (token, groupId) => request(`/api/groups/${groupId}/join`, { method: 'POST', token }),
+  joinGroupByCode: (token, code) =>
+    request('/api/groups/join-by-code', { method: 'POST', token, body: { code } }),
   leaveGroup: (token, groupId) => request(`/api/groups/${groupId}/leave`, { method: 'POST', token }),
+  getGroupRequests: (token, groupId) => request(`/api/groups/${groupId}/requests`, { token }),
+  approveGroupRequest: (token, groupId, userId) =>
+    request(`/api/groups/${groupId}/requests/${userId}/approve`, { method: 'POST', token }),
+  denyGroupRequest: (token, groupId, userId) =>
+    request(`/api/groups/${groupId}/requests/${userId}/deny`, { method: 'POST', token }),
+  getGroupMembers: (token, groupId) => request(`/api/groups/${groupId}/members`, { token }),
+  getGroupLeaderboard: (token, groupId, { challenge, sort } = {}) =>
+    request(
+      `/api/groups/${groupId}/leaderboard?challenge=${encodeURIComponent(challenge || 'all')}&sort=${encodeURIComponent(sort || 'streak')}`,
+      { token }
+    ),
 
   getPosts: (token, feed) => request(`/api/posts?feed=${feed}`, { token }),
   createPost: (token, { challenge, caption, groupId, dayKey, photoKey }) =>
